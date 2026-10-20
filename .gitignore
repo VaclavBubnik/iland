@@ -1,0 +1,15 @@
+# Build
+build/
+
+# AI work folder
+slop/
+
+# Visual Studio Code, Editor
+.vscode
+
+# Visual Studio, IDE
+.vs
+
+# Other
+.DS_Store
+desktop.ini
