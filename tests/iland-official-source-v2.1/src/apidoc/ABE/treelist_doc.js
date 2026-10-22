@@ -1,0 +1,404 @@
+// documentation for the FMTreeList API
+
+
+/**
+The TreeList class (**`stand.trees`** variable) represents a list of trees that can be manipulated (e.g., harvested) with functions of the class.
+When javascript code is executed in the context of an Activity, a variable 'trees' is available as a property of the `stand` variable (`stand.trees`).
+This TreeList is "linked" to the stand, for example a call to `loadAll()` loads all trees of the stand (and not of the whole landscape).
+Note that a TreeList can created using `new TreeList` - in this
+case the TreeList is not linked automatically to a forest stand (but see also loadFromList()).
+
+## Overview
+### initializing the list
+The main function for loading (i.e. making available for manipulation) trees of a forest stand is `loadAll()` or `load()`. `loadAll()` can be used to load either
+all trees, and `load()` to load only a subset of trees (based on filter criteria).
+### manipulating the content of the list
+The trees in a list (loaded by `load()`) may be manipulated using functions such as `filter()` or `sort()`. There are functions helping to get aggregate values
+(`mean()`, `sum()`), or to get the value of a given `percentile()`.
+### manipulationg trees
+Trees present in the tree list may be harvested or simply cut down. Main functions are `kill()`, `harvest()`. If `simulate` is true, harvested/killed trees
+are only marked for removal. At a later point in time, all marked trees can be removed using `removeMarkedTrees()`.
+### general notes
+The tree list heavily used the expression engine of iLand https://iland-model.org/Expression. Expressions are provided as strings to the
+respective Javascript functions (e.g.,`filter`) and evaluated by iLand. Note that tree species names are treated as a special case (https://iland-model.org/Expression#Constants).
+
+
+## Examples
+    // 'trees' variable is available as a property of "stand"
+    // this loads *all* trees of the current forest stand (i.e. trees>4m)
+    stand.trees.loadAll();
+    stand.trees.simulate = true; // enable simulation mode (this is the default)
+    // keep only spruce trees with a dbh>20cm in the list:
+    stand.trees.filter("species = piab and dbh>20"); // note: piab is a constant and not a string
+    // now harvest all trees (since simulate=true, the trees are only marked for harvesting)
+    stand.trees.harvest();
+    ...
+    // later: remove all trees from the system that are marked for removal (harvest/kill)
+    stand.trees.removeMarkedTrees();
+
+@class TreeList
+***/
+
+
+/**
+The `load()` method is the main means to get all the trees of a forest stand into the list.
+Per default, all trees (i.e. trees>4m height) that are located on the forest stand are loaded. If `filter` is provided, only a subset
+of the trees are loaded. `filter` can either be a probability (between 0..1) for selecting individual trees, or an Expression using tree
+variables.
+
+    stand.trees.load(0.2); // load (randomly selected) 20% of all trees
+    stand.trees.load("rnd(0,1)<0.2)"); // the same as above, but using an Expression
+    // load a subset of trees (for which the given Expression evalulates to true):
+    stand.trees.load("species=piab and dbh>20");
+
+@method load
+@param {String} filter optional filter criterion (see above).
+@return {Integer} the number of trees loaded.
+**/
+
+/**
+The `loadFromList()` method is a way to copy tree list data from a different TreeList object. A typical use case is when you
+need to process parts of a tree lists (e.g., based on location).
+Per default, all trees (i.e. trees>4m height) that are located in `other_list`are loaded. If `filter` is provided, only a subset
+of the trees are loaded. `filter` can either be a probability (between 0..1) for selecting individual trees, or an Expression using tree
+variables. Note also, that the linked forest stand is copied as well, i.e. a later call to `loadAll()` would load all trees of that stand.
+
+
+    var my_list = new TreeList;
+    stand.trees.load('dbh > 20');
+    // loop over three species and count for each species the number of trees >20cm
+    // (note that this would have been also possible with the sum() function)
+    for (s of ['piab', 'fasy', 'lade']) {
+       const n = my_list.loadFromList(stand.trees, 'species=' + s);
+       console.log(`Species '${s}' has ${n} trees >20cm.`);
+    }
+
+@method loadFromList
+@param {TreeList} other_list TreeList object to copy tree information from
+@param {String} filter optional filter criterion (see above).
+@return {Integer} the number of trees loaded.
+**/
+
+
+/**
+When `simulate` is true, harvest operations are not actually executed, but affected trees are marked as either for harvest or killing. Calling `removeMarkedTrees()` then
+executes the harvest operation.
+Note: tree variables `markharvest`, `markcut`, `markcrop` are available for use in `filter()` or for visualization in iLand.
+@property simulate
+@type Boolean
+@default true
+*/
+
+/**
+the ID of the currently active stand (or -1).
+@property standId
+@type Integer
+@readonly
+*/
+
+/**
+the number of trees that are currently loaded in the list.
+@property count
+@type Integer
+@readonly
+*/
+
+/**
+Load all trees (living trees, >4m height) of the current `stand` into the internal list.
+
+@method loadAll
+@return {Integer} the number of loaded harvested.
+**/
+
+
+/**
+Check all trees of the stand and either kill or harvest those trees that are marked for that operation.
+
+See also: {{#crossLink "TreeList/simulate:property"}}{{/crossLink}}, {{#crossLink "TreeList/harvest:method"}}{{/crossLink}}
+
+@method removeMarkedTrees
+@return {Integer} the number of trees that have been removed.
+**/
+
+/**
+Kill (i.e., cut down and do not remove from the forest) the trees in the list, filtered with `filter`.
+
+See also: {{#crossLink "TreeList/simulate:property"}}{{/crossLink}}
+
+@method kill
+@param {String} filter A valid filter Expression.
+@return {Integer} the number of trees that have been removed.
+@Example
+    stand.trees.loadAll();
+    stand.trees.kill('dbh<10'); // kill all trees with a dbh<10cm
+**/
+
+/**
+Clear the list without affecting the trees in the list. Note that explcitly clearing the list is usually not necessary (e.g. when using load() )
+
+@method clear
+@Example
+    stand.trees.clear(); // empty lsit
+    stand.trees.log(stand.trees.count); // -> 0
+**/
+
+
+/**
+Apply a filter on the list. Only trees for which the filter condition `filter` is true, remain in the list.
+
+See also: {{#crossLink "TreeList/simulate:property"}}{{/crossLink}}
+
+@method filter
+@param {String} filter A valid filter Expression.
+@return {Integer} the number of trees that remain in the list.
+@Example
+    stand.trees.loadAll();
+    stand.trees.filter('dbh>10'); // only trees with dbh>10 remain in the list
+    stand.trees.filter('incsum(volume)<100'); // keep trees with a total of 100m3 in the list
+
+
+**/
+
+/**
+Remove the `fraction` of all trees [0..1] for which `filter` evalulates to `true`. Return number of removed trees.
+When trees are harvested, the biomass is removed from the system (compare kill/cut).
+When `harvest()` is called without parameters, then all trees that are currently in the list are removed (see also `load()`).
+
+
+See also: {{#crossLink "TreeList/simulate:property"}}{{/crossLink}}, {{#crossLink "TreeList/kill:method"}}{{/crossLink}}
+
+@method harvest
+@param {string} filter A valid filter Expression.
+@param {double} fraction The fraction [0..1] of trees that should be harvested. Default value is 1.
+@return {Integer} the number of trees that have been removed.
+@Example
+    stand.trees.loadAll();
+    stand.trees.harvest('species=piab', 0.2); // remove 20% (selected randomly) from all spruce
+    stand.trees.harvest('dbh>30'); // harvest all trees with dbh>30cm
+**/
+
+/**
+Return the `perc` th percentile (0..100) value from the list of trees. The function requires that a {{#crossLink "TreeList/sort:method"}}{{/crossLink}} operation
+has been executed before this function is called. The `sort()` function assigns to each tree in the list a value (e.g., the `dbh`). The `percentile` function
+accesses those value. Without a call to `sort` the function returns 0 for all values. The percentile 100 returns the maximum value within the list (i.e., the value last
+attached to the last tree in the list).
+
+See also:{{#crossLink "TreeList/sort:method"}}{{/crossLink}}
+
+@method percentile
+@param {int} perc a number between 0 and 100 that should be returned.
+@return {double} the value at the given percentile (see details)
+@Example
+    stand.trees.loadAll();
+    stand.trees.sort('dbh'); // smallest trees in front of the list
+    console.log("IQR: " + stand.trees.percentile(75) - stand.trees.percentile(25) );
+    console.log("min: " + stand.trees.percentile(0) + ", median: " + stand.trees.percentile(50) + ", max: " + stand.trees.percentile(100) );
+**/
+
+/**
+`sort()` sorts the tree list according to the numeric value of the expression `sort_expr`. The sort order is ascending, i.e., after sorting the tree with the smallest
+value is at the beginning of the list. Descending order can be achieved by inverting the sign of the expression. A sorted list is useful
+for extracting {{#crossLink "TreeList/percentile:method"}}{{/crossLink}} values or for using the `incsum` function of expressions [iland-model.org/Expression].
+
+See also: {{#crossLink "TreeList/percentile:method"}}{{/crossLink}}
+
+@method sort
+@param {string} sort_expr a valid expression used for sorting
+@Example
+    stand.trees.loadAll();
+    stand.trees.sort('volume'); // small trees in front of the list
+    stand.trees.filter('incsum(volume) < 100'); // keep 100m3 of the trees with the lowest volume
+    stand.trees.loadAll();
+    stand.trees.sort('-x'); // x-coordinate, descending, trees start from the 'right'
+    stand.trees.filter('incsum(1)<=100'); // filter 100 trees on the right edge of the area
+**/
+
+/**
+Randomly shuffles the list of trees. Trees in a newly refreshed list (e.g., `loadAll()`) have a non-random spatial pattern. When
+randomness is wanted (e.g., to select randomly N trees), then `randomize` should be used.
+
+Note: `randomize` overwrites the values of a {{#crossLink "TreeList/sort:method"}}{{/crossLink}} call.
+
+See also: {{#crossLink "TreeList/loadAll:method"}}{{/crossLink}}
+
+@method randomize
+@Example
+    stand.trees.loadAll();
+    stand.trees.sort('dbh');
+    stand.trees.filter('dbh<' + stand.trees.percentile(50) ); // only the population with dbh < median(dbh) remains
+    // to randomly select from this population:
+    stand.trees.randomize();
+    stand.trees.filter('incsum(1) < 100'); // select 100 trees from the population
+**/
+
+/**
+Calculates the mean value of a given `expr` that can contain any of the available tree variables. The optional `filter` is another expression
+that filters the trees that are processed.
+Return the mean value.
+
+See also: {{#crossLink "TreeList/sum:method"}}{{/crossLink}}
+
+@method mean
+@param {string} expr a valid expression that should be processed
+@param {string} filter only trees that pass the filter are processed
+@return {double} the mean value of the population
+@Example
+    stand.trees.loadAll();
+    console.log('mean dbh: ' + stand.trees.mean('dbh') );
+    var tdbh = stand.trees.mean('height', 'dbh>=30'); // mean height of all trees >30cm
+    var ldbh = stand.trees.mean('height', 'dbh<30'); // mean height of all belwo 30cm - note that the list is not altered
+**/
+
+/**
+Calculates the sum of a given `expr` that can contain any of the available tree variables. The optional `filter` is another expression
+that filters the trees that are processed. Returns the sum of `expr`.
+
+Note: counting trees that fulfill the `filter` expression can be expressed as: `sum('1', '<filter-expr>')`.
+
+See also:{{#crossLink "TreeList/mean:method"}}{{/crossLink}}
+
+@method sum
+@param {string} expr a valid expression that should be processed
+@param {string} filter only trees that pass the filter are processed
+@return {double} the sum over the value of `expr`of the population
+@Example
+    stand.trees.loadAll();
+    console.log('total basal area: ' + stand.trees.sum('basalarea') );
+    console.log('N trees >30cm: ' + stand.trees.sum('1', 'dbh>30') ); // note that '1' is a string (and parsed by the expression engine)
+**/
+
+/**
+`killSaplings()` provides an access to the cohorts of the sapling layer in iLand https://iland-model.org/sapling+growth+and+competition .
+https://iland-model.org/sapling+variables provides a list of available variables.
+The function removes all sapling cohorts for which `expr` returns `true`.
+
+Note: The interface to saplings currrently much simpler compared to the interface for trees >4m.
+
+@method killSaplings
+@param {string} filter a filter expression to select the saplings that should be removed
+@return {int} the number of sapling cohorts that have been removed.
+@Example
+    stand.trees.killSaplings('species=piab and age<5'); // kill spruce saplings younger than 5yrs
+**/
+
+
+/**
+`spatialFilter()` filters the tree that are currently in the list based on their spatial location and the content
+of the `grid`. The function checks for every tree the corresponding pixel of `grid` and evaluates the `filter` function. If the
+function returns true, the tree is kept (if the tree is outside of the `grid` the tree is removed).
+
+Note that when not otherwise altered, the default name of a grid is simply 'x', so filtering for a certain value could be achieved
+by using 'x=1' as a `filter`.
+
+See also: {{#crossLink "Grid/create:method"}}{{/crossLink}}, {{#crossLink "Grid/setOrigin:method"}}{{/crossLink}}
+
+@method spatialFilter
+@param {Grid} grid a {{#crossLink "Grid"}}{{/crossLink}}Grid object
+@param {string} filter A expression that is evaluated for every pixel of the `grid`.
+@return {int}  the number of trees still remaining in the list, or -1 if an error occurs.
+@Example
+    // create a grid
+    var g = new Grid();
+    g.create(10,10,5); // 50x50m, default name is 'x'
+    g.setOrigin(30,20); // set lower left corner to 30/20
+    // in the context of ABE:
+    stand.trees.loadAll(); // load all trees
+    // filter so, that only trees that are located on a pixel in g with the value 1 remain:
+    stand.trees.spatialFilter(g, 'x=1');
+    // do something, e.g.,
+    stand.trees.harvest();
+**/
+
+/**
+`filterRandom()` selects randomly `n_trees` from the list and removes all other trees.
+
+See also: {{#crossLink "TreeList/filterRandomExclude:method"}}{{/crossLink}}
+
+@method filterRandom
+@param {int} n_trees the number of trees to select randomly from the list
+@return {int}  the number of trees that were selected.
+@Example
+
+    stand.trees.loadAll(); // load all trees
+    // filter so, that only 100 trees remain in the list:
+    stand.trees.filterRandom(100);
+    // do something, e.g.,
+    stand.trees.harvest(); // remove those 100 trees
+**/
+
+/**
+`filterRandomExclude()` excludes randomly `n_trees` trees from the list, i.e. the number of trees *after* execution in the list is
+`n_trees_before - n_trees` (the number of trees before the call minus the trees excluded). This is useful when you want to
+keep a number of trees *remaining* on the stand (i.e., not harvested). Note that the exclusion is relative to the current content of the list (e.g., filtered).
+
+A typical use is to reduce the number of trees on a stand to a given number of stems (e.g., from a yield table).
+
+See also: {{#crossLink "TreeList/filterRandom:method"}}{{/crossLink}}
+
+
+@method filterRandomExclude
+@param {int} n_trees the number of trees to select randomly from the list
+@return {int}  the number of trees that were selected.
+@Example
+
+    stand.trees.loadAll(); // load all trees, e.g. 1500 trees
+    let yield_table_target = 1200;
+    stand.trees.filterRandomExclude(yield_table_target); // 300 trees remain in the lsit
+    // do something, e.g.,
+    stand.trees.harvest(); // remove trees in the list (n=300), i.e. 1200 will remain on the stand
+
+    // using a subset of trees:
+    stand.trees.load('species = fasy'); // load all beech trees
+    stand.trees.filterRandomExclude(50); // 50 beech trees should not remain in the list (i.e. excluded from harvest)
+    stand.trees.harvest(); // remove all but 50 beech trees from the stand
+**/
+
+/**
+`tree(index)` returns the tree with index `index` (index is 0-based) from the current list. The returned Javascript object
+is a reference to the represented tree in iLand. See {{#crossLink "Tree"}}{{/crossLink}} for more details.
+
+See also: {{#crossLink "TreeList/treeObject:method"}}{{/crossLink}}
+
+@method tree
+@return {Tree}  a reference to the tree with index `index` (see above). If the index is out of range, the `valid` property of the returned object is `false`.
+@Example
+    stand.trees.loadAll(); // fill the tree list
+    // loop over all trees
+    for (var i=0;i<stand.trees.count;++i)
+       console.log( stand.trees.tree(i).dbh );
+
+**/
+
+/**
+`treeObject(index)` returns the tree with index `index` (index is 0-based) from the current list. A new Javascript object
+is created for the tree. See {{#crossLink "Tree"}}{{/crossLink}} for more details.
+
+See also: {{#crossLink "TreeList/tree:method"}}{{/crossLink}}
+
+@method treeObject
+@return {Tree}  a object representing the tree with index `index` (see above), or an invalid Tree object (if index is out of range).
+@Example
+    stand.trees.loadAll(); // fill the tree list
+    var x = stand.trees.treeObject(7); // 8th tree in the list
+    // access the tree
+    if (x.valid == true)
+       console.log(x.dbh);
+
+**/
+
+/**
+Set a given `flag` for all trees in the list to `value`. Note that not all possible flags are allowed to be changed.
+Trying to alter such a flag yields an exception.
+
+See also: {{#crossLink "Tree/setFlag:method"}}{{/crossLink}}
+
+@method setFlag
+@param {Tree.Flags} flag A flag as defined by the Tree object
+@param {bool} value value to set the flag, defaults to true.
+@Example
+    stand.trees.loadAll();
+    stand.trees.filter('dbh>10'); // only trees with dbh>10 remain in the list
+    stand.trees.filter('incsum(volume)<100'); // keep trees with a total of 100m3 in the list
+
+
+**/

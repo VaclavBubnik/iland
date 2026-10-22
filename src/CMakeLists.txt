@@ -87,7 +87,7 @@ target_link_libraries(
     Threads::Threads
 )
 
-if(MINGW)
+if(MINGW AND ILAND_STATIC_RUNTIME)
     # Avoid requiring users to install the MinGW runtime DLLs to run the library.
     target_link_options(${SUB_PROJECT_NAME} PRIVATE -static)
 endif()

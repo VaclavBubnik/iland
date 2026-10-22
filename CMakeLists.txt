@@ -19,6 +19,8 @@ cmake_minimum_required(VERSION 3.24)
 
 project(iland LANGUAGES C CXX)
 
+option(ILAND_STATIC_RUNTIME "Link the Windows runtime statically" ON)
+
 find_package(Threads REQUIRED)
 
 # Keep the executable beside the shared library so it can load the library at runtime.
