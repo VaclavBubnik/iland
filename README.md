@@ -22,9 +22,8 @@ The goal of this port is to make the iLand model available for programmatic use 
 ## Example build instructions
 
 ```cmd
-set "PATH=C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\Ninja;%PATH%"
-cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-cmake --build build --parallel 4
+cmake -S . -B build -G "Unix Makefiles"
+cmake --build build
 ```
 
 ## Tests
