@@ -27,6 +27,14 @@ cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
 cmake --build build --parallel 4
 ```
 
+## Tests
+
+The test suite includes a compatibility benchmark that runs this library and
+official iLand 2.1 on the permafrost borehole model, then compares their output
+databases. Their results currently match for this dataset. Running the
+benchmark requires Qt to build the official iLand 2.1 application; See the
+[benchmark instructions](tests/benchmarks/permafrost-borehole-v2.1/README.md).
+
 ## Original project and resources
 
 This port is based on the original iLand forest landscape model.
